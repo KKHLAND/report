@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과세특 리포트 생성기</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel Support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-after: always;
+                break-after: page;
+            }
+            .report-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                overflow: hidden;
+            }
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* A4 Paper Size Implementation for Screen */
+        .report-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        /* Custom Accent Colors - ensuring distinct colors for each subject */
+        .border-left-accent-1 { border-left: 6px solid #1e3a8a; } /* Blue-900 (Dark Blue) */
+        .border-left-accent-2 { border-left: 6px solid #059669; } /* Emerald-600 (Green) */
+        .border-left-accent-3 { border-left: 6px solid #d97706; } /* Amber-600 (Orange) */
+        .border-left-accent-4 { border-left: 6px solid #db2777; } /* Pink-600 (Pink) */
+
+        .bg-pattern {
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* File Input Custom Styling */
+        .file-input-group {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-group input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Control Panel (Hidden when printing) -->
+    <div class="no-print fixed top-0 left-0 w-full bg-slate-900 shadow-xl z-50 p-4 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto flex flex-col xl:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide">과세특 리포트 생성기</h1>
+                    <p class="text-xs text-slate-300">나이스 엑셀 파일들을 선택하세요 (여러 개 가능)</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center justify-center gap-3 w-full xl:w-auto">
+                
+                <!-- School Name Input -->
+                <div class="relative group flex items-center bg-slate-800 border border-slate-600 rounded-lg px-3 py-1">
+                    <span class="text-slate-400 text-xs mr-2 font-medium">학교명:</span>
+                    <input type="text" id="schoolNameInput" value="" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32 font-bold placeholder-slate-400" placeholder="학교명 입력">
+                </div>
+
+                <!-- Teacher Name Input -->
+                <div class="relative group flex items-center bg-slate-800 border border-slate-600 rounded-lg px-3 py-1">
+                    <span class="text-slate-400 text-xs mr-2 font-medium">담당교사:</span>
+                    <input type="text" id="teacherNameInput" value="" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32 font-bold placeholder-slate-400" placeholder="교사명 입력">
+                </div>
+
+                <!-- Logo Input -->
+                <div class="relative group">
+                    <label for="logoInput" class="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition shadow-sm text-sm text-slate-200 font-medium group-hover:text-white group-hover:border-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 group-hover:text-white transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span id="logoLabel">학교 로고 (선택)</span>
+                    </label>
+                    <input type="file" id="logoInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                </div>
+
+                <!-- Data Input (Multiple Allowed) -->
+                <div class="relative group">
+                     <label for="fileInput" class="flex items-center gap-2 px-4 py-2 bg-blue-600 border border-blue-500 rounded-lg cursor-pointer hover:bg-blue-500 transition shadow-lg text-sm text-white font-bold ring-2 ring-blue-900 ring-opacity-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span id="fileLabel">나이스 파일 선택 (다중)</span>
+                    </label>
+                    <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                </div>
+
+                <button onclick="window.print()" class="bg-white hover:bg-gray-100 text-slate-900 font-bold py-2 px-6 rounded-lg shadow-lg transition flex items-center gap-2 whitespace-nowrap text-sm border border-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    인쇄하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spacer for fixed header -->
+    <div class="no-print h-24"></div>
+
+    <!-- Container for Generated Reports -->
+    <div id="reportContainer" class="pb-20">
+        <div class="max-w-4xl mx-auto text-center py-20 text-gray-400 no-print">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-lg">1. <b>[학교명/교사명]</b>을 입력하고 <b>[학교 로고]</b>를 선택해주세요.<br>2. <b>[나이스 파일 선택]</b>을 눌러 10개의 과목별 엑셀 파일을 한 번에 선택해주세요.<br><span class="text-sm text-gray-400 mt-2 block">(지원: 나이스 원본 xlsx, csv 등)</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Sort order map
+        const subjectOrder = ["영어Ⅰ", "영어I", "영어Ⅱ", "영어II", "영미 문학 읽기", "영미문학읽기", "영어권 문화", "영어권문화"];
+        const subjectMap = {
+            "영어Ⅰ": 1, "영어I": 1,
+            "영어Ⅱ": 2, "영어II": 2,
+            "영미 문학 읽기": 3, "영미문학읽기": 3,
+            "영어권 문화": 4, "영어권문화": 4
+        };
+
+        // Group Definitions for Page Breaks
+        const page1Subjects = ["영어Ⅰ", "영어I", "영어Ⅱ", "영어II"];
+        const page2Subjects = ["영미 문학 읽기", "영미문학읽기", "영어권 문화", "영어권문화"];
+
+        let uploadedLogoData = null; 
+        let uploadedStudentData = null; 
+
+        // Handle School Name Change
+        document.getElementById('schoolNameInput').addEventListener('input', function(e) {
+            if (uploadedStudentData) {
+                renderReports(uploadedStudentData);
+            }
+        });
+
+        // Handle Teacher Name Change
+        document.getElementById('teacherNameInput').addEventListener('input', function(e) {
+            if (uploadedStudentData) {
+                renderReports(uploadedStudentData);
+            }
+        });
+
+        // Handle Logo Upload
+        document.getElementById('logoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('logoLabel').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedLogoData = e.target.result;
+                if (uploadedStudentData) {
+                    renderReports(uploadedStudentData);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Byte Calculation
+        function calculateBytes(str) {
+            if (!str) return 0;
+            let bytes = 0;
+            for (let i = 0; i < str.length; i++) {
+                const code = str.charCodeAt(i);
+                if (code > 127) bytes += 3;
+                else bytes += 1;
+            }
+            return bytes;
+        }
+
+        // Student ID Generation Logic (Improved)
+        function generateId(grade, classNumStr) {
+            if (!grade || !classNumStr) return "";
+            
+            // Extract all numbers from the string (handles "1/1", "1반1번", "1 1", "01/01")
+            const numbers = String(classNumStr).match(/\d+/g);
+            
+            if (!numbers || numbers.length < 2) {
+                return "";
+            }
+
+            const c = parseInt(numbers[0], 10);
+            const n = parseInt(numbers[1], 10);
+            const g = parseInt(grade, 10);
+
+            if (isNaN(g) || isNaN(c) || isNaN(n)) return "";
+
+            // Formula: Grade*10000 + Class*100 + Number
+            return g * 10000 + c * 100 + n;
+        }
+
+        // Handle Multiple File Upload
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            document.getElementById('fileLabel').textContent = `${files.length}개 파일 선택됨`;
+            
+            let allRawData = [];
+
+            const filePromises = files.map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    const fileName = file.name.toLowerCase();
+
+                    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                        reader.onload = (e) => {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                            resolve(jsonData);
+                        };
+                        reader.readAsArrayBuffer(file);
+                    } else {
+                        reader.onload = (e) => {
+                            const text = e.target.result;
+                            const jsonData = parseCSV(text);
+                            resolve(jsonData);
+                        };
+                        reader.readAsText(file, 'UTF-8');
+                    }
+                });
+            });
+
+            try {
+                const results = await Promise.all(filePromises);
+                
+                results.forEach(rows => {
+                    if (rows && rows.length > 0) {
+                        const normalized = normalizeData(rows);
+                        allRawData = allRawData.concat(normalized);
+                    }
+                });
+
+                uploadedStudentData = groupData(allRawData);
+                renderReports(uploadedStudentData);
+
+            } catch (error) {
+                console.error("Error reading files:", error);
+                alert("파일을 읽는 도중 오류가 발생했습니다.");
+            }
+        });
+
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+
+                if (inQuotes) {
+                    if (char === '"' && nextChar === '"') {
+                        currentCell += '"';
+                        i++;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        currentCell += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        currentRow.push(currentCell.trim());
+                        currentCell = '';
+                    } else if (char === '\n' || char === '\r') {
+                        if (currentCell || currentRow.length > 0) {
+                            currentRow.push(currentCell.trim());
+                            rows.push(currentRow);
+                        }
+                        currentRow = [];
+                        currentCell = '';
+                        if (char === '\r' && nextChar === '\n') i++;
+                    } else {
+                        currentCell += char;
+                    }
+                }
+            }
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        function normalizeData(rows) {
+            if (!rows || rows.length < 2) return [];
+
+            // Dynamic Header Detection: Search first 10 rows for NEIS keywords
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                const rowStr = rows[i].join(" ");
+                if (rowStr.includes("학년") && (rowStr.includes("반") || rowStr.includes("번호"))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            // If header found
+            if (headerRowIndex !== -1) {
+                const header = rows[headerRowIndex].map(h => String(h).trim());
+                
+                const idxGrade = header.indexOf("학년");
+                const idxSubject = header.indexOf("과목");
+                const idxName = header.indexOf("성명");
+                
+                let idxClassNum = header.findIndex(h => h.includes("반/번호"));
+                if (idxClassNum === -1) idxClassNum = header.findIndex(h => h === "반");
+
+                const idxText = header.findIndex(h => h.includes("세부능력"));
+
+                // Fallback indices if dynamic fails but header keywords found partially
+                const finalIdxGrade = idxGrade > -1 ? idxGrade : 2;
+                const finalIdxSubject = idxSubject > -1 ? idxSubject : 4;
+                const finalIdxClassNum = idxClassNum > -1 ? idxClassNum : 6;
+                const finalIdxName = idxName > -1 ? idxName : 7;
+                const finalIdxText = idxText > -1 ? idxText : 9;
+
+                const normalized = [];
+                for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length < 5) continue;
+
+                    const grade = row[finalIdxGrade];
+                    const classNum = row[finalIdxClassNum];
+                    const subject = row[finalIdxSubject];
+                    const name = row[finalIdxName];
+                    const text = row[finalIdxText] || "";
+                    
+                    const studentId = generateId(grade, classNum);
+                    const bytes = calculateBytes(text);
+
+                    if (studentId && name) {
+                         normalized.push({
+                            id: String(studentId),
+                            name: String(name).trim(),
+                            subject: String(subject).trim(),
+                            text: text,
+                            bytes: bytes
+                        });
+                    }
+                }
+                return normalized;
+            } 
+            
+            // Legacy/Combined CSV format Fallback
+            const header = rows[0].map(h => String(h).trim());
+            const idxId = header.findIndex(h => h.includes("학번"));
+            if (idxId > -1) {
+                const idxSubject = header.findIndex(h => h.includes("과목"));
+                const idxName = header.findIndex(h => h.includes("성명") || h.includes("이름"));
+                const idxText = header.findIndex(h => h.includes("세부능력"));
+                const idxBytes = header.findIndex(h => h.includes("바이트"));
+                
+                const normalized = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length < 3) continue;
+                    const text = row[idxText] || "";
+                    const bytes = (idxBytes > -1 && row[idxBytes]) ? row[idxBytes] : calculateBytes(text);
+
+                    normalized.push({
+                        id: String(row[idxId]),
+                        name: String(row[idxName]).trim(),
+                        subject: String(row[idxSubject]).trim(),
+                        text: text,
+                        bytes: bytes
+                    });
+                }
+                return normalized;
+            }
+
+            return [];
+        }
+
+        function groupData(data) {
+            const groups = {};
+            data.forEach(item => {
+                const idStr = String(item.id || "").trim();
+                const nameStr = String(item.name || "").trim();
+                if (!idStr) return;
+
+                const key = `${idStr}_${nameStr}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        id: idStr,
+                        name: nameStr,
+                        subjects: []
+                    };
+                }
+                const exists = groups[key].subjects.find(s => s.subject === item.subject);
+                if (!exists) {
+                    groups[key].subjects.push(item);
+                }
+            });
+            
+            const sortedKeys = Object.keys(groups).sort((a, b) => {
+                const idA = parseInt(groups[a].id) || 0;
+                const idB = parseInt(groups[b].id) || 0;
+                return idA - idB;
+            });
+
+            return sortedKeys.map(key => {
+                const student = groups[key];
+                student.subjects.sort((a, b) => {
+                    const orderA = subjectMap[a.subject] || 99;
+                    const orderB = subjectMap[b.subject] || 99;
+                    return orderA - orderB;
+                });
+                return student;
+            });
+        }
+
+        function renderReports(students) {
+            const container = document.getElementById('reportContainer');
+            container.innerHTML = '';
+            
+            const teacherName = document.getElementById('teacherNameInput').value || "";
+            const schoolName = document.getElementById('schoolNameInput').value || "학교명 입력";
+
+            const defaultLogo = `
+                <div class="w-28 h-28 bg-blue-50 rounded-full flex items-center justify-center text-blue-200 mb-0 border-2 border-blue-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+            `;
+            
+            const logoHtml = uploadedLogoData 
+                ? `<img src="${uploadedLogoData}" class="w-28 h-auto max-h-28 object-contain mb-0" alt="School Logo">` 
+                : defaultLogo;
+
+            students.forEach((student) => {
+                
+                const subjectsForPage1 = student.subjects.filter(s => page1Subjects.includes(s.subject));
+                const subjectsForPage2 = student.subjects.filter(s => page2Subjects.includes(s.subject));
+                
+                const pagesToRender = [];
+                if (subjectsForPage1.length > 0) pagesToRender.push(subjectsForPage1);
+                if (subjectsForPage2.length > 0) pagesToRender.push(subjectsForPage2);
+                
+                pagesToRender.forEach((chunk, pageIndex) => {
+                    const page = document.createElement('div');
+                    page.className = 'report-page page-break';
+                    
+                    const today = new Date();
+                    const dateString = `${today.getFullYear()}. ${String(today.getMonth() + 1).padStart(2, '0')}. ${String(today.getDate()).padStart(2, '0')}`;
+
+                    let subjectsHtml = '';
+                    chunk.forEach((subj, idx) => {
+                        const accentClass = `border-left-accent-${(idx % 4) + 1}`;
+                        const subjectTitle = subj.subject || "과목명 없음";
+                        const byteVal = subj.bytes ? String(subj.bytes) : '0';
+                        
+                        subjectsHtml += `
+                            <div class="mb-6 bg-white rounded-r-lg border-l-4 ${accentClass} pl-4 py-1">
+                                <div class="flex justify-between items-end mb-2 border-b border-gray-100 pb-2">
+                                    <h3 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                                        ${subjectTitle}
+                                    </h3>
+                                    <span class="text-xs text-gray-400 font-mono tracking-tighter">
+                                        ${byteVal} Bytes
+                                    </span>
+                                </div>
+                                <p class="text-gray-700 text-[11pt] leading-relaxed text-justify break-keep">
+                                    ${subj.text}
+                                </p>
+                            </div>
+                        `;
+                    });
+
+                    page.innerHTML = `
+                        <header class="flex justify-between items-start border-b-4 border-blue-900 pb-1 mb-6">
+                            <div>
+                                <h1 class="text-3xl font-extrabold text-blue-900 tracking-tight">2025 교과 세부능력 및 특기사항</h1>
+                                <p class="text-blue-600 font-medium mt-1">Global Leader를 꿈꾸는 원묵인</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <div class="flex flex-col items-center">
+                                    ${logoHtml}
+                                    <div class="text-xs text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded mt-1 relative z-10">
+                                        담당교사 : ${teacherName}
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white p-5 rounded-lg shadow-sm mb-8 flex items-center">
+                            <div class="mr-8 border-r border-blue-700 pr-8">
+                                <span class="text-blue-200 text-xs block mb-1">Student ID</span>
+                                <span class="text-2xl font-bold font-mono">${student.id}</span>
+                            </div>
+                            <div>
+                                <span class="text-blue-200 text-xs block mb-1">Name</span>
+                                <span class="text-2xl font-bold tracking-wide">${student.name}</span>
+                            </div>
+                            <div class="ml-auto opacity-20">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="flex-grow">
+                            ${subjectsHtml}
+                        </div>
+
+                        <footer class="mt-auto pt-6 border-t border-gray-200 text-center">
+                            <p class="text-[10px] text-gray-400">
+                                본 리포트는 학생의 학업 성취 및 교과 활동 내용을 바탕으로 작성되었습니다. | 발행일: ${dateString} | ${schoolName}
+                            </p>
+                        </footer>
+                    `;
+
+                    container.appendChild(page);
+                });
+            });
+            
+            if (students.length > 0) {
+                 console.log(`Generated reports for ${students.length} students.`);
+            }
+        }
+    </script>
+</body>
+</html>
