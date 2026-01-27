@@ -59,11 +59,17 @@
             box-sizing: border-box;
         }
         
-        /* Custom Accent Colors - ensuring distinct colors for each subject */
-        .border-left-accent-1 { border-left: 6px solid #1e3a8a; } /* Blue-900 (Dark Blue) */
-        .border-left-accent-2 { border-left: 6px solid #059669; } /* Emerald-600 (Green) */
-        .border-left-accent-3 { border-left: 6px solid #d97706; } /* Amber-600 (Orange) */
-        .border-left-accent-4 { border-left: 6px solid #db2777; } /* Pink-600 (Pink) */
+        /* Subject Specific Accent Colors 
+           Group 1 (Eng I, II): Cool Colors (Blue, Teal)
+           Group 2 (Lit, Cul): Warm/Distinct Colors (Rose, Amber)
+        */
+        .border-eng1 { border-left: 6px solid #1e3a8a; } /* Blue-900 (Navy) */
+        .border-eng2 { border-left: 6px solid #0f766e; } /* Teal-700 (Teal Green) */
+        
+        .border-lit { border-left: 6px solid #be123c; } /* Rose-700 (Deep Pink/Red) */
+        .border-cul { border-left: 6px solid #d97706; } /* Amber-600 (Orange/Gold) */
+        
+        .border-default { border-left: 6px solid #4b5563; } /* Gray */
 
         .bg-pattern {
             background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
@@ -169,6 +175,14 @@
             "영어Ⅱ": 2, "영어II": 2,
             "영미 문학 읽기": 3, "영미문학읽기": 3,
             "영어권 문화": 4, "영어권문화": 4
+        };
+        
+        // Subject specific color mapping
+        const subjectStyleMap = {
+            "영어Ⅰ": "border-eng1", "영어I": "border-eng1",
+            "영어Ⅱ": "border-eng2", "영어II": "border-eng2",
+            "영미 문학 읽기": "border-lit", "영미문학읽기": "border-lit",
+            "영어권 문화": "border-cul", "영어권문화": "border-cul"
         };
 
         // Group Definitions for Page Breaks
@@ -508,7 +522,9 @@
 
                     let subjectsHtml = '';
                     chunk.forEach((subj, idx) => {
-                        const accentClass = `border-left-accent-${(idx % 4) + 1}`;
+                        // Apply distinct color per subject name if possible, otherwise use fallback
+                        let accentClass = subjectStyleMap[subj.subject] || 'border-default';
+                        
                         const subjectTitle = subj.subject || "과목명 없음";
                         const byteVal = subj.bytes ? String(subj.bytes) : '0';
                         
