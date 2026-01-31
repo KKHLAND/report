@@ -60,10 +60,17 @@
         }
         
         /* Subject Specific Accent Colors */
-        .border-eng1 { border-left: 6px solid #1e3a8a; } /* Blue-900 */
-        .border-eng2 { border-left: 6px solid #0f766e; } /* Teal-700 */
-        .border-lit { border-left: 6px solid #be123c; } /* Rose-700 */
-        .border-cul { border-left: 6px solid #d97706; } /* Amber-600 */
+        .border-eng1 { border-left: 6px solid #1e3a8a; } /* Navy Blue */
+        .border-eng2 { border-left: 6px solid #0f766e; } /* Teal */
+        .border-lit { border-left: 6px solid #be123c; } /* Rose */
+        .border-cul { border-left: 6px solid #d97706; } /* Amber */
+        
+        /* New Subject Categories */
+        .border-math { border-left: 6px solid #4338ca; } /* Indigo (Math) */
+        .border-sci { border-left: 6px solid #059669; } /* Emerald (Science) */
+        .border-soc { border-left: 6px solid #b45309; } /* Orange (Social) */
+        .border-kor { border-left: 6px solid #e11d48; } /* Crimson (Korean) */
+        
         .border-default { border-left: 6px solid #4b5563; } /* Gray */
 
         .bg-pattern {
@@ -144,18 +151,33 @@
     </div>
 
     <script>
-        // Sort order map and groupings
-        const subjectOrder = ["영어Ⅰ", "영어I", "영어Ⅱ", "영어II", "영미 문학 읽기", "영미문학읽기", "영어권 문화", "영어권문화"];
-        const subjectMap = {
-            "영어Ⅰ": 1, "영어I": 1, "영어Ⅱ": 2, "영어II": 2,
-            "영미 문학 읽기": 3, "영미문학읽기": 3, "영어권 문화": 4, "영어권문화": 4
-        };
+        // Sort order map and groupings (Expanded for all subjects)
+        const subjectOrder = [
+            "국어", "화법과 작문", "독서", "언어와 매체", "문학",
+            "수학", "수학Ⅰ", "수학I", "수학Ⅱ", "수학II", "미적분", "확률과 통계", "기하",
+            "영어", "영어Ⅰ", "영어I", "영어Ⅱ", "영어II", "영미 문학 읽기", "영미문학읽기", "영어권 문화", "영어권문화",
+            "한국사", "통합사회", "공통사회1", "공통사회2", "정치와 법", "경제", "사회·문화", "생활과 윤리", "윤리와 사상",
+            "통합과학", "공통과학1", "공통과학2", "물리학Ⅰ", "물리학II", "화학Ⅰ", "화학II", "생명과학Ⅰ", "생명과학II", "지구과학Ⅰ", "지구과학II"
+        ];
+        
+        const subjectMap = {};
+        subjectOrder.forEach((name, index) => { subjectMap[name] = index + 1; });
+
         const subjectStyleMap = {
-            "영어Ⅰ": "border-eng1", "영어I": "border-eng1", "영어Ⅱ": "border-eng2", "영어II": "border-eng2",
-            "영미 문학 읽기": "border-lit", "영미문학읽기": "border-lit", "영어권 문화": "border-cul", "영어권문화": "border-cul"
+            // Korean
+            "국어": "border-kor", "화법과 작문": "border-kor", "독서": "border-kor", "언어와 매체": "border-kor", "문학": "border-kor",
+            // Math
+            "수학": "border-math", "수학Ⅰ": "border-math", "수학I": "border-math", "수학Ⅱ": "border-math", "수학II": "border-math", "미적분": "border-math", "확률과 통계": "border-math", "기하": "border-math",
+            // English
+            "영어": "border-eng1", "영어Ⅰ": "border-eng1", "영어I": "border-eng1", "영어Ⅱ": "border-eng2", "영어II": "border-eng2",
+            "영미 문학 읽기": "border-lit", "영미문학읽기": "border-lit", "영어권 문화": "border-cul", "영어권문화": "border-cul",
+            // Social
+            "한국사": "border-soc", "통합사회": "border-soc", "공통사회1": "border-soc", "공통사회2": "border-soc", "정치와 법": "border-soc", "경제": "border-soc", "사회·문화": "border-soc", "생활과 윤리": "border-soc", "윤리와 사상": "border-soc",
+            // Science
+            "통합과학": "border-sci", "공통과학1": "border-sci", "공통과학2": "border-sci", "물리학Ⅰ": "border-sci", "화학Ⅰ": "border-sci", "생명과학Ⅰ": "border-sci", "지구과학Ⅰ": "border-sci"
         };
 
-        const page1Subjects = ["영어Ⅰ", "영어I", "영어Ⅱ", "영어II"];
+        const page1Subjects = ["국어", "수학", "수학Ⅰ", "수학I", "수학Ⅱ", "수학II", "영어", "영어Ⅰ", "영어I", "영어Ⅱ", "영어II"];
 
         let uploadedLogoData = null; 
         let uploadedStudentData = null; 
@@ -277,7 +299,7 @@
                 if (!groups[key].subjects.find(s => s.subject === item.subject)) groups[key].subjects.push(item);
             });
             return Object.values(groups).sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0)).map(student => {
-                student.subjects.sort((a, b) => (subjectMap[a.subject] || 99) - (subjectMap[b.subject] || 99));
+                student.subjects.sort((a, b) => (subjectMap[a.subject] || 999) - (subjectMap[b.subject] || 999));
                 return student;
             });
         }
@@ -286,14 +308,16 @@
             const container = document.getElementById('reportContainer');
             container.innerHTML = '';
             const teacherName = document.getElementById('teacherNameInput').value || "";
-            const schoolName = document.getElementById('schoolNameInput').value || "학교명 입력";
+            const schoolNameInput = document.getElementById('schoolNameInput').value || "";
+            const schoolNameDisplay = schoolNameInput || "학교명 입력";
+            
+            const schoolPrefix = schoolNameInput.replace(/(고등학교|학교|고)$/, "") || "원묵";
+            const dynamicSlogan = `Global Leader를 꿈꾸는 ${schoolPrefix}인`;
+
             const defaultLogo = `<div class="w-28 h-28 bg-blue-50 rounded-full flex items-center justify-center text-blue-200 border-2 border-blue-100"><svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>`;
             const logoHtml = uploadedLogoData ? `<img src="${uploadedLogoData}" class="w-28 h-auto max-h-28 object-contain mb-0" alt="Logo">` : defaultLogo;
 
             students.forEach((student) => {
-                // Modified Pagination Logic: 
-                // If total subjects <= 2, put on one page. 
-                // Otherwise, group by predefined categories.
                 let pagesToRender = [];
                 if (student.subjects.length <= 2) {
                     pagesToRender.push(student.subjects);
@@ -326,7 +350,10 @@
 
                     page.innerHTML = `
                         <header class="flex justify-between items-start border-b-4 border-blue-900 pb-1 mb-6">
-                            <div><h1 class="text-3xl font-extrabold text-blue-900 tracking-tight">2025 교과 세부능력 및 특기사항</h1><p class="text-blue-600 font-medium mt-1">Global Leader를 꿈꾸는 원묵인</p></div>
+                            <div>
+                                <h1 class="text-3xl font-extrabold text-blue-900 tracking-tight">2025 교과 세부능력 및 특기사항</h1>
+                                <p class="text-blue-600 font-medium mt-1">${dynamicSlogan}</p>
+                            </div>
                             <div class="flex flex-col items-end"><div class="flex flex-col items-center">${logoHtml}<div class="text-xs text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded mt-1">담당교사 : ${teacherName}</div></div></div>
                         </header>
                         <div class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white p-5 rounded-lg shadow-sm mb-8 flex items-center">
@@ -335,7 +362,11 @@
                             <div class="ml-auto opacity-20"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" /></svg></div>
                         </div>
                         <div class="flex-grow">${subjectsHtml}</div>
-                        <footer class="mt-auto pt-6 border-t border-gray-200 text-center"><p class="text-[10px] text-gray-400">발행일: ${dateString} | ${schoolName}</p></footer>`;
+                        <footer class="mt-auto pt-6 border-t border-gray-200 text-center">
+                            <p class="text-[10px] text-gray-400">
+                                본 리포트는 학생의 학업 성취 및 교과 활동 내용을 바탕으로 작성되었습니다. | 발행일: ${dateString} | ${schoolNameDisplay}
+                            </p>
+                        </footer>`;
                     container.appendChild(page);
                 });
             });
